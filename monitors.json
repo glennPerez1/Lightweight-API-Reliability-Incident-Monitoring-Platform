@@ -20,6 +20,10 @@
       "interval_sec": 60,
       "timeout_sec": 5,
       "fail_threshold": 3
+    },
+    {
+      "name": "Legacy Database Server",
+      "url": "http://192.0.2.1" 
     }
   ],
   "alerting": {

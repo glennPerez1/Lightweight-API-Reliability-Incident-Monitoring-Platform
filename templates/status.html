@@ -2,66 +2,215 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Status</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulse Monitor — Live Status</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: #f5f5f4;
-            margin: 0;
-            padding: 2rem;
-            color: #1a1a1a;
-        }
-        h1 {
-            font-size: 1.5rem;
-            font-weight: 500;
-            margin-bottom: 1.5rem;
-        }
-        .card {
-            background: #ffffff;
-            border: 1px solid #e5e5e3;
-            border-radius: 10px;
-            padding: 1rem 1.25rem;
-            margin-bottom: 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .card.up { border-left: 4px solid #1d9e75; }
-        .card.down { border-left: 4px solid #e24b4a; }
-        .name { font-weight: 500; }
-        .url { font-size: 0.8rem; color: #888; }
-        .badge {
-            font-size: 0.75rem;
-            font-weight: 500;
-            padding: 2px 10px;
-            border-radius: 999px;
-        }
-        .badge.up { background: #e1f5ee; color: #085041; }
-        .badge.down { background: #fcebeb; color: #791f1f; }
-        .stats { font-size: 0.8rem; color: #555; text-align: right; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body>
-    <h1>Service status</h1>
-    {% for m in monitors %}
-    <div class="card {{ 'down' if m.is_down else 'up' }}">
-        <div>
-            <div class="name">{{ m.name }}</div>
-            <div class="url">{{ m.url }}</div>
-        </div>
-        <div class="stats">
-            <span class="badge {{ 'down' if m.is_down else 'up' }}">
-                {{ 'DOWN' if m.is_down else 'UP' }}
-            </span>
-            <div>
-                {% if m.uptime.uptime_pct is not none %}
-                    {{ m.uptime.uptime_pct }}% uptime (24h) · p95 {{ m.uptime.p95_latency_ms }}ms
-                {% else %}
-                    No data yet
-                {% endif %}
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen antialiased selection:bg-indigo-500 selection:text-white">
+
+    <header class="border-b border-slate-800/60 bg-[#0f1424]/80 backdrop-blur-md sticky top-0 z-50 transition-all duration-300">
+        <div class="max-w-6xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                    Pulse Monitor
+                </h1>
+                <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md font-medium border border-slate-700/50">Live</span>
+            </div>
+            <div class="flex items-center space-x-2 text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-800">
+                <span>Auto-refreshing in <span id="countdown" class="font-bold text-indigo-400">30</span>s</span>
             </div>
         </div>
-    </div>
-    {% endfor %}
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+        
+        <section>
+            <h2 class="text-xs font-semibold text-slate-400 tracking-wider uppercase mb-4">Monitored Endpoints</h2>
+            <div id="monitors-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for m in monitors %}
+                <div id="card-{{ m.id }}" class="group relative bg-[#0f1424] border {% if m.is_down %}border-rose-500/30 bg-rose-950/5{% else %}border-slate-800/80 hover:border-slate-700/80{% endif %} rounded-2xl p-5 transition-all duration-300 shadow-xl shadow-black/20">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="space-y-1 truncate pr-2">
+                            <h3 class="font-semibold text-slate-200 group-hover:text-white transition-colors duration-200 truncate">{{ m.name }}</h3>
+                            <p class="text-xs text-slate-500 font-mono truncate max-w-xs">{{ m.url }}</p>
+                        </div>
+                        <span id="badge-{{ m.id }}" class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold tracking-wide transition-all duration-300 {% if m.is_down %}bg-rose-500/10 text-rose-400 border border-rose-500/20{% else %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20{% endif %}">
+                            {{ 'DOWN' if m.is_down else 'UP' }}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-4 border-t border-slate-800/60 text-xs text-slate-400">
+                        <div>
+                            <span class="text-slate-500 block text-[10px] uppercase font-medium tracking-wider mb-0.5">Latency</span>
+                            <span id="latency-{{ m.id }}" class="text-sm font-semibold text-slate-300 font-mono">
+                                {{ m.latest_check.response_ms if m.latest_check else 0 }}ms
+                            </span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-slate-500 block text-[10px] uppercase font-medium tracking-wider mb-0.5">Uptime (24h)</span>
+                            <span class="text-sm font-semibold text-indigo-400 font-mono">
+                                {% if m.uptime and m.uptime.uptime_pct is not none %}{{ m.uptime.uptime_pct }}%{% else %}100%{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="bg-[#0f1424] border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-xl shadow-black/20">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+                <div>
+                    <h2 class="text-base font-semibold text-slate-200">Latency Metrics Over Time</h2>
+                    <p class="text-xs text-slate-500">Live responsiveness comparison across all tracked targets</p>
+                </div>
+            </div>
+            <div class="h-[300px] w-full">
+                <canvas id="latencyChart"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let countdownTime = 10;
+        const countdownEl = document.getElementById('countdown');
+        let latencyChart;
+
+        // Map data using objects to enforce strict ID lookup (Fixes Order Dependency)
+        const monitorMap = {};
+        const monitorNames = [];
+        const initialLatencies = [];
+
+        /* Jinja loop parsed securely into arrays */
+        {% for m in monitors %}
+        monitorMap["{{ m.id }}"] = { name: "{{ m.name }}", index: monitorNames.length };
+        monitorNames.push("{{ m.name }}");
+        initialLatencies.push({{ m.latest_check.response_ms if m.latest_check else 0 }});
+        {% endfor %}
+
+        // Initialize history datasets linked systematically by loop indices
+        const chartDataSets = monitorNames.map((name, index) => {
+            const colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#3b82f6'];
+            return {
+                label: name,
+                data: [initialLatencies[index]],
+                borderColor: colors[index % colors.length],
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: 3,
+                tension: 0.3
+            };
+        });
+
+        // Render standard line chart
+        function initChart() {
+            const ctx = document.getElementById('latencyChart').getContext('2d');
+            latencyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})],
+                    datasets: chartDataSets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } } }
+                    },
+                    scales: {
+                        x: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } } },
+                        y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } }, title: { display: true, text: 'Latency (ms)', color: '#64748b' } }
+                    }
+                }
+            });
+
+            // Execute right after chart renders (Fixes Immediate Refresh)
+            updateStatus();
+        }
+
+        // Live refresh using API data mapped perfectly by Monitor ID
+        async function updateStatus() {
+            try {
+                const response = await fetch('/status');
+                if (!response.ok) return;
+                const data = await response.json();
+                
+                const timeLabel = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                
+                // Add fresh time mark to chart if it is distinct
+                if (latencyChart.data.labels[latencyChart.data.labels.length - 1] !== timeLabel) {
+                    latencyChart.data.labels.push(timeLabel);
+                    if (latencyChart.data.labels.length > 10) latencyChart.data.labels.shift();
+                }
+
+                data.monitors.forEach((monitor) => {
+                    const mappedInfo = monitorMap[monitor.id];
+                    if (!mappedInfo) return; // Skip if ID isn't registered on initial load
+                    
+                    const datasetIndex = mappedInfo.index;
+                    const card = document.getElementById(`card-${monitor.id}`);
+                    const badge = document.getElementById(`badge-${monitor.id}`);
+                    const latencyText = document.getElementById(`latency-${monitor.id}`);
+
+                    const ms = monitor.latest_check ? monitor.latest_check.response_ms : 0;
+
+                    // Push value directly to the correct dataset index matching the Monitor ID
+                    if (latencyChart.data.datasets[datasetIndex]) {
+                        // Prevent duplicating the very first load dot if executing instantly
+                        if (latencyChart.data.labels.length === 1 && latencyChart.data.datasets[datasetIndex].data.length === 1) {
+                            latencyChart.data.datasets[datasetIndex].data[0] = ms;
+                        } else {
+                            latencyChart.data.datasets[datasetIndex].data.push(ms);
+                            if (latencyChart.data.datasets[datasetIndex].data.length > 10) {
+                                latencyChart.data.datasets[datasetIndex].data.shift();
+                            }
+                        }
+                    }
+
+                    if (latencyText) latencyText.innerText = `${ms}ms`;
+
+                    // Update UI states reactively
+                    if (monitor.is_down) {
+                        if (card) card.className = "group relative bg-[#0f1424] border border-rose-500/30 bg-rose-950/5 rounded-2xl p-5 transition-all duration-300 shadow-xl shadow-black/20";
+                        if (badge) {
+                            badge.className = "inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold tracking-wide bg-rose-500/10 text-rose-400 border border-rose-500/20";
+                            badge.innerText = "DOWN";
+                        }
+                    } else {
+                        if (card) card.className = "group relative bg-[#0f1424] border border-slate-800/80 hover:border-slate-700/80 rounded-2xl p-5 transition-all duration-300 shadow-xl shadow-black/20";
+                        if (badge) {
+                            badge.className = "inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold tracking-wide bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                            badge.innerText = "UP";
+                        }
+                    }
+                });
+
+                latencyChart.update();
+            } catch (err) {
+                console.error("Failed to sync monitor status:", err);
+            }
+        }
+
+        // Interval scheduler loop
+        setInterval(() => {
+            countdownTime--;
+            if (countdownTime <= 0) {
+                updateStatus();
+                countdownTime = 10;
+            }
+            if (countdownEl) countdownEl.innerText = countdownTime;
+        }, 1000);
+
+        window.onload = initChart;
+    </script>
 </body>
 </html>
