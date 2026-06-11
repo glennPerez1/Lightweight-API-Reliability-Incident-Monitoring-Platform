@@ -62,7 +62,8 @@ These steps work the same on Windows (using Git Bash), macOS, and Linux.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/api-health-monitor.git
+git clone git@github.com:glennPerez1/Lightweight-API-Reliability-Incident-Monitoring-Platform.git
+git clone https://github.com/glennPerez1/Lightweight-API-Reliability-Incident-Monitoring-Platform.git
 cd api-health-monitor
 ```
 
