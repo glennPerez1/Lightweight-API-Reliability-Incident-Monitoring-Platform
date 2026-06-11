@@ -1,0 +1,29 @@
+{
+  "monitors": [
+    {
+      "name": "GitHub API",
+      "url": "https://api.github.com",
+      "interval_sec": 30,
+      "timeout_sec": 5,
+      "fail_threshold": 3
+    },
+    {
+      "name": "JSONPlaceholder",
+      "url": "https://jsonplaceholder.typicode.com/posts/1",
+      "interval_sec": 30,
+      "timeout_sec": 5,
+      "fail_threshold": 3
+    },
+    {
+      "name": "Example domain",
+      "url": "https://example.com",
+      "interval_sec": 60,
+      "timeout_sec": 5,
+      "fail_threshold": 3
+    }
+  ],
+  "alerting": {
+    "discord_webhook_url": "",
+    "enabled": false
+  }
+}
