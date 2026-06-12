@@ -178,14 +178,14 @@ python main.py
 
 ## Using the project
 
-While `main.py` is running, open these in your browser:
+While `main.py` is running, open your browser and navigate here first to explore the system:
 
-| URL | What it shows |
-|---|---|
-| `http://localhost:8000/docs` | Interactive API docs (Swagger UI) — try every endpoint here |
-| `http://localhost:8000/status` | Raw JSON: current status of all monitors |
-| `http://localhost:8000/page` | A simple visual status page (green/red cards) |
-| `http://localhost:8000/incidents` | List of past and ongoing incidents |
+| URL | Component | What it shows |
+|---|---|---|
+| **`http://localhost:8000/page`** | **Executive Management Console** | **Main Visual Dashboard (Green/Red node cards, live latency charts, persistent logs)** |
+| `http://localhost:8000/docs` | Swagger UI Docs | Interactive API docs — test and run every backend endpoint directly |
+| `http://localhost:8000/status` | Raw Telemetry Stream | Live JSON payload output tracking the status of all monitors |
+| `http://localhost:8000/incidents` | Core Incident Registry | Raw JSON data array of all past and active outages |
 
 ---
 ## Dashboard Walkthrough
