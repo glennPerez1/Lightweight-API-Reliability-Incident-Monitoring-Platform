@@ -194,60 +194,25 @@ While `main.py` is running, open these in your browser:
 
 #### Checkpoint 1: The Matrix Baseline (13:08:20)
 
-![Dashboard State 1](screenshots/seq1.png)
+![Checkpoint 1 Baseline](screenshot/seq1.png)
 
 This screenshot captures the monitoring system during a steady-state polling cycle while multiple incidents are already active.
 
-##### High-Latency Recovery Event
-
-The **Failing Payment Gateway** (pink line) has just recovered from a severe latency spike of nearly **9,000 ms** and dropped back to approximately **4,875 ms**. Despite the latency improvement, the endpoint is still returning a **503 Service Unavailable** response, so the service remains marked as **DOWN** and its uptime remains at **0.0%**.
-
-##### Permanent Blackhole Endpoint
-
-The **Legacy Database Server** (blue line) remains completely flat at approximately **7,172 ms**. This endpoint uses the reserved IP address **192.0.2.1**, which intentionally cannot respond. Every monitoring cycle therefore reaches the configured network timeout limit, producing a consistent latency ceiling.
-
-##### Persistent Incident Logging
-
-The incident history panel demonstrates the system's state-machine-based outage tracking:
-
-* One previously resolved GitHub API outage.
-* Two currently active outage records.
-* Incident data remains persisted inside SQLite for historical analysis.
+* **High-Latency Recovery Event:** The Failing Payment Gateway (pink line) has just recovered from a severe latency spike of nearly 9,000 ms and dropped back to approximately 4,875 ms. Despite the latency improvement, the endpoint is still returning a 503 Service Unavailable response, so the service remains marked as DOWN and its uptime remains at 0.0%.
+* **Permanent Blackhole Endpoint:** The Legacy Database Server (blue line) remains completely flat at approximately 7,172 ms. This endpoint uses the reserved IP address 192.0.2.1, which intentionally cannot respond. Every monitoring cycle therefore reaches the configured network timeout limit, producing a consistent latency ceiling.
+* **Persistent Incident Logging:** The incident history panel demonstrates the system's state-machine-based outage tracking: One previously resolved GitHub API outage and two currently active outage records. Incident data remains persisted inside SQLite for historical analysis.
 
 ---
 
 #### Checkpoint 2: The Next Poll Cycle (13:09:00)
 
-![Dashboard State 2](screenshots/seq2.png)
+![Checkpoint 2 Update](screenshot/seq2.png)
 
-This screenshot was captured during the next scheduled polling cycle approximately **40 seconds later**.
+This screenshot was captured during the next scheduled polling cycle approximately 40 seconds later.
 
-##### Multi-Service Latency Cross
-
-A new monitoring cycle has completed and the **Failing Payment Gateway** (pink line) spikes again to approximately **7,061 ms**, crossing over the **Legacy Database Server** latency line on the chart.
-
-##### Dynamic Chart Updates
-
-The dashboard updates in real time:
-
-* Older metrics automatically shift left.
-* The oldest timestamp exits the graph window.
-* Newly collected metrics appear on the right edge.
-* Chart.js redraws the visualization smoothly without requiring a page refresh.
-
-##### Duplicate Incident Prevention
-
-Although both failing services generated additional failed checks, the incident log remained unchanged.
-
-This behavior demonstrates the outage state machine:
-
-1. The backend checks whether an incident already exists.
-2. Existing active outages are identified.
-3. Duplicate incident records are prevented.
-4. Only genuine state transitions (DOWN → UP or UP → DOWN) generate new database entries.
-
-This approach keeps the incident history clean and prevents database clutter during long-running outages.
-
+* **Multi-Service Latency Cross:** A new monitoring cycle has completed and the Failing Payment Gateway (pink line) spikes again to approximately 7,061 ms, crossing over the Legacy Database Server latency line on the chart.
+* **Dynamic Chart Updates:** The dashboard updates in real time. Older metrics automatically shift left, the oldest timestamp exits the graph window, and newly collected metrics appear on the right edge. Chart.js redraws the visualization smoothly without requiring a page refresh.
+* **Duplicate Incident Prevention:** Although both failing services generated additional failed checks, the incident log remained unchanged. This behavior demonstrates the outage state machine: The backend checks whether an incident already exists, existing active outages are identified, and duplicate incident records are prevented. Only genuine state transitions (DOWN → UP or UP → DOWN) generate new database entries, keeping the incident history clean.
 ---
 
 ## Future Improvements
