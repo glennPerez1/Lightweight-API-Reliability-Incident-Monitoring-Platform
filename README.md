@@ -1,112 +1,140 @@
-# API Health Monitor
+# API Health Monitor — Executive Console
 
-A lightweight, self-hosted tool that watches a list of websites/APIs,
-records their uptime and response time history, and automatically detects
-incidents (sustained outages) — similar in spirit to UptimeRobot or
-Pingdom, but small enough to run on your own laptop.
+A lightweight, self-hosted monitoring tool that tracks the health and performance of websites, APIs, and internal services in real time.
 
-It's built entirely in Python with FastAPI, SQLite, and APScheduler — no
-external services or accounts required to get started.
+Think of it as a personal version of **UptimeRobot** or **Datadog** that runs entirely on your own machine without requiring cloud accounts or external services.
+
+Built with **Python**, **FastAPI**, **SQLite**, **APScheduler**, **Tailwind CSS**, and **Chart.js**.
 
 ---
 
-## What it does
+## Features
 
-- **Pings** each configured URL on its own schedule (e.g. every 30 or 60
-  seconds)
-- **Records** every check (status code, response time, success/failure) in
-  a local SQLite database
-- **Detects incidents**: if a URL fails 3 times in a row, an "incident" is
-  opened. When it recovers, the incident is automatically closed and its
-  duration is recorded
-- **Reports**: uptime percentage and p95 latency over the last 24 hours,
-  via a REST API, a live terminal dashboard, and a simple HTML status page
-- **Alerts** (optional): sends a message to a Discord webhook when a
-  service goes down or recovers
+### Real-Time Monitoring
+- Continuously monitors configured websites and APIs.
+- Measures response times and availability.
+- Supports multiple endpoints running on independent schedules.
+
+### Asynchronous Health Checks
+- Uses non-blocking I/O for efficient concurrent monitoring.
+- Checks multiple services simultaneously without slowing down the application.
+
+### Incident Detection & Tracking
+- Detects repeated failures using configurable thresholds.
+- Automatically creates outage records when a service goes down.
+- Automatically marks incidents as resolved when the service recovers.
+
+### Executive Dashboard
+- Modern dark-themed monitoring console.
+- Split-screen layout inspired by Network Operations Center (NOC) dashboards.
+- Live latency charts and uptime analytics.
+- No scrolling required for common monitoring tasks.
+
+### Local Storage
+- Uses SQLite for storing:
+  - Monitoring history
+  - Latency metrics
+  - Incident records
+  - Uptime statistics
 
 ---
 
-## Project structure
+## Tech Stack
 
-```
+- Python 3.10+
+- FastAPI
+- SQLite
+- APScheduler
+- HTTPX
+- Tailwind CSS
+- Chart.js
+
+---
+
+## Project Structure
+
+```text
 api-health-monitor/
-├── monitors.json       # Configure which URLs to watch
-├── requirements.txt     # Python dependencies
-├── main.py                # Entry point — run this to start everything
+├── monitors.json       # Monitoring configuration
+├── requirements.txt    # Project dependencies
+├── main.py             # Application entry point
+│
 ├── app/
-│   ├── db.py               # Database setup
-│   ├── checker.py            # Pings URLs and records results
-│   ├── incidents.py           # Incident detection logic
-│   ├── alerts.py                # Sends Discord alerts
-│   ├── stats.py                  # Uptime % and latency calculations
-│   ├── scheduler.py               # Schedules checks in the background
-│   ├── cli.py                      # Live terminal dashboard
-│   └── api.py                       # FastAPI web server
+│   ├── db.py           # Database connection handling
+│   ├── checker.py      # Health check execution logic
+│   ├── incidents.py    # Incident state management
+│   ├── alerts.py       # Alert dispatch layer
+│   ├── stats.py        # Analytics and uptime calculations
+│   ├── scheduler.py    # Background monitoring scheduler
+│   ├── cli.py          # Terminal-based monitoring view
+│   └── api.py          # FastAPI routes and APIs
+│
 └── templates/
-    └── status.html                  # HTML status page
+    └── status.html     # Dashboard UI
 ```
 
 ---
 
 ## Requirements
 
+Before running the project, make sure you have:
+
 - Python 3.10 or newer
-- pip (comes with Python)
+- pip
 
 ---
 
-## Setup — running it on your own laptop
+## Installation
 
-These steps work the same on Windows (using Git Bash), macOS, and Linux.
-
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
-git clone git@github.com:glennPerez1/Lightweight-API-Reliability-Incident-Monitoring-Platform.git
-git clone https://github.com/glennPerez1/Lightweight-API-Reliability-Incident-Monitoring-Platform.git
+git clone git@github.com:glennPerez1/Lightweight-API-Reliability-Incident-Monitoring-Platform.git 
+git clone https://github.com/glennPerez1/Lightweight-API-Reliability-Incident-Monitoring-Platform.git 
 cd api-health-monitor
 ```
 
-### 2. Create a virtual environment
-
-A virtual environment keeps this project's dependencies separate from
-everything else on your system.
+### 2. Create a Virtual Environment
 
 ```bash
 python -m venv venv
 ```
 
-If `python` doesn't work, try `python3` or (on Windows) `py`.
+### 3. Activate the Virtual Environment
 
-### 3. Activate the virtual environment
+#### Windows (Git Bash)
 
-**On Windows (Git Bash):**
 ```bash
 source venv/Scripts/activate
 ```
 
-**On Windows (Command Prompt):**
+#### Windows (CMD)
+
 ```cmd
 venv\Scripts\activate.bat
 ```
 
-**On macOS / Linux:**
+#### macOS / Linux
+
 ```bash
 source venv/bin/activate
 ```
 
-You'll know it worked when you see `(venv)` at the start of your terminal
-prompt.
+You should now see `(venv)` at the beginning of your terminal prompt.
 
-### 4. Install dependencies
+### 4. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 5. (Optional) Configure monitors and alerts
+---
 
-Open `monitors.json` and edit the list of URLs you want to monitor:
+## Configuration
+
+Edit the `monitors.json` file to add the services you want to monitor.
+
+Example:
 
 ```json
 {
@@ -117,44 +145,36 @@ Open `monitors.json` and edit the list of URLs you want to monitor:
       "interval_sec": 30,
       "timeout_sec": 5,
       "fail_threshold": 3
+    },
+    {
+      "name": "Legacy Database Server",
+      "url": "http://192.0.2.1"
     }
-  ],
-  "alerting": {
-    "discord_webhook_url": "",
-    "enabled": false
-  }
+  ]
 }
 ```
 
-- `interval_sec` — how often (in seconds) this URL is checked
-- `timeout_sec` — how long to wait before treating the request as failed
-- `fail_threshold` — how many consecutive failures count as an "incident"
+### Configuration Options
 
-To enable Discord alerts: create a webhook in your Discord server
-(Server Settings → Integrations → Webhooks → New Webhook → Copy URL),
-paste the URL into `discord_webhook_url`, and set `"enabled": true`.
+| Field | Description |
+|---------|------------|
+| name | Display name of the monitored service |
+| url | Target endpoint URL |
+| interval_sec | Time between health checks |
+| timeout_sec | Request timeout |
+| fail_threshold | Number of consecutive failures before creating an incident |
 
-If you skip this, the app still works — alerts are simply printed to the
-terminal instead.
+If optional values are omitted, safe default values are used automatically.
 
-### 6. Run the app
+---
+
+## Running the Application
+
+Start the monitoring service:
 
 ```bash
 python main.py
 ```
-
-You should see output like:
-
-```
-Scheduler started. Checks are running in the background.
-[GitHub API] UP - 142ms - status=200
-INFO:     Uvicorn running on http://0.0.0.0:8000
-```
-
-Leave this running — it's both your background monitor and your web
-server.
-
----
 
 ## Using the project
 
@@ -167,111 +187,75 @@ While `main.py` is running, open these in your browser:
 | `http://localhost:8000/page` | A simple visual status page (green/red cards) |
 | `http://localhost:8000/incidents` | List of past and ongoing incidents |
 
-### Live terminal dashboard
+---
+## Dashboard Walkthrough
 
-Open a **second terminal**, activate the virtual environment again, and
-run:
+### Dashboard Screenshots
 
-```bash
-source venv/Scripts/activate   # or venv/bin/activate on Mac/Linux
-python -m app.cli
-```
+#### Checkpoint 1: The Matrix Baseline (13:08:20)
 
-This shows a live, auto-refreshing table with current status, uptime %,
-and latency for every monitor.
+![Dashboard State 1](screenshots/seq1.png)
 
-### Stopping the app
+This screenshot captures the monitoring system during a steady-state polling cycle while multiple incidents are already active.
 
-Press `Ctrl + C` in each terminal.
+##### High-Latency Recovery Event
+
+The **Failing Payment Gateway** (pink line) has just recovered from a severe latency spike of nearly **9,000 ms** and dropped back to approximately **4,875 ms**. Despite the latency improvement, the endpoint is still returning a **503 Service Unavailable** response, so the service remains marked as **DOWN** and its uptime remains at **0.0%**.
+
+##### Permanent Blackhole Endpoint
+
+The **Legacy Database Server** (blue line) remains completely flat at approximately **7,172 ms**. This endpoint uses the reserved IP address **192.0.2.1**, which intentionally cannot respond. Every monitoring cycle therefore reaches the configured network timeout limit, producing a consistent latency ceiling.
+
+##### Persistent Incident Logging
+
+The incident history panel demonstrates the system's state-machine-based outage tracking:
+
+* One previously resolved GitHub API outage.
+* Two currently active outage records.
+* Incident data remains persisted inside SQLite for historical analysis.
 
 ---
 
-## Testing that everything works
+#### Checkpoint 2: The Next Poll Cycle (13:09:00)
 
-### 1. Check the terminal output
-You should see a new line every 30-60 seconds, like:
-```
-[GitHub API] UP - 142ms - status=200
-```
+![Dashboard State 2](screenshots/seq2.png)
 
-### 2. Check `/status`
-Visit `http://localhost:8000/status`. Each monitor should have a
-`latest_check` with a real `status_code` and `success: 1`.
+This screenshot was captured during the next scheduled polling cycle approximately **40 seconds later**.
 
-### 3. Check `/page`
-Visit `http://localhost:8000/page`. You should see a green card with "UP"
-and an uptime percentage for each monitor.
+##### Multi-Service Latency Cross
 
-### 4. Check the database directly
-With the app running, open a third terminal (venv activated) and run:
+A new monitoring cycle has completed and the **Failing Payment Gateway** (pink line) spikes again to approximately **7,061 ms**, crossing over the **Legacy Database Server** latency line on the chart.
 
-```bash
-python -c "
-from app.db import get_connection
-conn = get_connection()
-rows = conn.execute('SELECT * FROM checks ORDER BY id DESC LIMIT 5').fetchall()
-for r in rows:
-    print(dict(r))
-"
-```
+##### Dynamic Chart Updates
 
-You should see real rows with timestamps and latencies.
+The dashboard updates in real time:
 
-### 5. Test incident detection
-Add a URL that doesn't exist to `monitors.json`:
+* Older metrics automatically shift left.
+* The oldest timestamp exits the graph window.
+* Newly collected metrics appear on the right edge.
+* Chart.js redraws the visualization smoothly without requiring a page refresh.
 
-```json
-{
-  "name": "Broken endpoint",
-  "url": "https://this-does-not-exist-abc123xyz.com",
-  "interval_sec": 15,
-  "timeout_sec": 5,
-  "fail_threshold": 3
-}
-```
+##### Duplicate Incident Prevention
 
-Restart `python main.py`, wait about 45-60 seconds, then check
-`http://localhost:8000/incidents`. You should see an entry with
-`"cause": "3 consecutive failed checks"` and `"resolved_at": null`.
-You'll also see `[ALERT - not sent, alerting disabled] 🔴 DOWN: ...` printed
-in the terminal.
+Although both failing services generated additional failed checks, the incident log remained unchanged.
 
-Remove this entry from `monitors.json` once you're done testing.
+This behavior demonstrates the outage state machine:
+
+1. The backend checks whether an incident already exists.
+2. Existing active outages are identified.
+3. Duplicate incident records are prevented.
+4. Only genuine state transitions (DOWN → UP or UP → DOWN) generate new database entries.
+
+This approach keeps the incident history clean and prevents database clutter during long-running outages.
 
 ---
 
-## Resetting the database
+## Future Improvements
 
-The database (`monitor.db`) is created automatically on first run. To start
-completely fresh, stop the app and delete it:
-
-```bash
-rm monitor.db
-```
-
-(On Windows Command Prompt: `del monitor.db`)
-
----
-
-## Known limitations / possible improvements
-
-- Adding a monitor via `POST /monitors` requires an app restart to start
-  scheduling checks for it
-- p95 latency can be noisy with very few data points (small sample sizes)
-- SQLite is suitable for low/moderate write volume — a high-traffic
-  deployment with hundreds of monitors checking every second would benefit
-  from PostgreSQL
-- No authentication on the API — fine for local/personal use, would need
-  an API key or login for a public deployment
-
----
-
-## Tech stack
-
-- **Python 3** — core language
-- **FastAPI** — REST API and web server
-- **SQLite** — local database (zero setup required)
-- **APScheduler** — background job scheduling
-- **httpx** — making HTTP requests to monitored endpoints
-- **Rich** — live terminal dashboard
-- **Jinja2** — HTML templating for the status page
+- Email alerts
+- Slack notifications
+- Discord webhooks
+- Multi-user authentication
+- Docker deployment support
+- PostgreSQL support
+- Historical reporting and exports
