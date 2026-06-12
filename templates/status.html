@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pulse Monitor — Live Status</title>
+    <title>Pulse Monitor — Executive Console</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="bg-[#0b0f19] text-slate-100 min-h-screen antialiased selection:bg-indigo-500 selection:text-white">
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
 
     <header class="border-b border-slate-800/60 bg-[#0f1424]/80 backdrop-blur-md sticky top-0 z-50 transition-all duration-300">
-        <div class="max-w-6xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        <div class="max-w-[1600px] mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <div class="relative flex h-3 w-3">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -23,19 +23,23 @@
                 <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
                     Pulse Monitor
                 </h1>
-                <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md font-medium border border-slate-700/50">Live</span>
+                <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md font-medium border border-slate-700/50">Console</span>
             </div>
             <div class="flex items-center space-x-2 text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-800">
-                <span>Auto-refreshing in <span id="countdown" class="font-bold text-indigo-400">30</span>s</span>
+                <span>Auto-refreshing in <span id="countdown" class="font-bold text-indigo-400">10</span>s</span>
             </div>
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+    <main class="max-w-[1600px] w-full mx-auto px-4 py-6 sm:px-6 lg:px-8 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <section>
-            <h2 class="text-xs font-semibold text-slate-400 tracking-wider uppercase mb-4">Monitored Endpoints</h2>
-            <div id="monitors-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <section class="lg:col-span-4 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xs font-semibold text-slate-400 tracking-wider uppercase">Monitored Endpoints</h2>
+                <span class="text-[10px] text-slate-500 font-mono">Real-time Node Stack</span>
+            </div>
+            
+            <div id="monitors-grid" class="space-y-3 lg:max-h-[750px] lg:overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {% for m in monitors %}
                 <div id="card-{{ m.id }}" class="group relative bg-[#0f1424] border {% if m.is_down %}border-rose-500/30 bg-rose-950/5{% else %}border-slate-800/80 hover:border-slate-700/80{% endif %} rounded-2xl p-5 transition-all duration-300 shadow-xl shadow-black/20">
                     <div class="flex items-start justify-between mb-4">
@@ -67,16 +71,28 @@
             </div>
         </section>
 
-        <section class="bg-[#0f1424] border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-xl shadow-black/20">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
-                <div>
+        <section class="lg:col-span-8 space-y-6 flex flex-col justify-between">
+            
+            <div class="bg-[#0f1424] border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-xl shadow-black/20 flex-1 flex flex-col min-h-[350px]">
+                <div class="mb-4">
                     <h2 class="text-base font-semibold text-slate-200">Latency Metrics Over Time</h2>
                     <p class="text-xs text-slate-500">Live responsiveness comparison across all tracked targets</p>
                 </div>
+                <div class="relative flex-1 min-h-[280px] w-full">
+                    <canvas id="latencyChart"></canvas>
+                </div>
             </div>
-            <div class="h-[300px] w-full">
-                <canvas id="latencyChart"></canvas>
+
+            <div class="bg-[#0f1424] border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-xl shadow-black/20 h-[280px] flex flex-col">
+                <div class="mb-4">
+                    <h2 class="text-base font-semibold text-slate-200">Recent Incident History Log</h2>
+                    <p class="text-xs text-slate-500">Real-time state machine transitions captured from SQLite database</p>
+                </div>
+                <div id="incident-timeline" class="space-y-3 overflow-y-auto flex-1 pr-2 scrollbar-thin scrollbar-thumb-slate-800">
+                    <div class="text-xs text-slate-500 text-center py-4">Loading historical state mutations...</div>
+                </div>
             </div>
+
         </section>
     </main>
 
@@ -85,19 +101,18 @@
         const countdownEl = document.getElementById('countdown');
         let latencyChart;
 
-        // Map data using objects to enforce strict ID lookup (Fixes Order Dependency)
+        // Initialize maps and lookups dynamically 
         const monitorMap = {};
         const monitorNames = [];
         const initialLatencies = [];
 
-        /* Jinja loop parsed securely into arrays */
+        /* Safely ingest and register monitor nodes tracking metadata keys */
         {% for m in monitors %}
-        monitorMap["{{ m.id }}"] = { name: "{{ m.name }}", index: monitorNames.length };
-        monitorNames.push("{{ m.name }}");
-        initialLatencies.push({{ m.latest_check.response_ms if m.latest_check else 0 }});
+        monitorMap[Number("{{ m.id }}")] = { name: String("{{ m.name }}"), index: monitorNames.length };
+        monitorNames.push(String("{{ m.name }}"));
+        initialLatencies.push(Number({{ m.latest_check.response_ms if m.latest_check else 0 }}));
         {% endfor %}
 
-        // Initialize history datasets linked systematically by loop indices
         const chartDataSets = monitorNames.map((name, index) => {
             const colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#3b82f6'];
             return {
@@ -111,7 +126,6 @@
             };
         });
 
-        // Render standard line chart
         function initChart() {
             const ctx = document.getElementById('latencyChart').getContext('2d');
             latencyChart = new Chart(ctx, {
@@ -133,11 +147,49 @@
                 }
             });
 
-            // Execute right after chart renders (Fixes Immediate Refresh)
             updateStatus();
+            updateIncidents();
         }
 
-        // Live refresh using API data mapped perfectly by Monitor ID
+        async function updateIncidents() {
+            try {
+                const response = await fetch('/incidents');
+                if (!response.ok) return;
+                const data = await response.json();
+                
+                const incidents = data.incidents || [];
+                const timelineEl = document.getElementById('incident-timeline');
+                
+                if (incidents.length === 0) {
+                    timelineEl.innerHTML = `<div class="text-xs text-slate-500 text-center py-4">🟢 All operational paths stable. No downtime incident records found.</div>`;
+                    return;
+                }
+
+                timelineEl.innerHTML = incidents.map(inc => {
+                    const isResolved = inc.resolved_at !== null;
+                    const statusText = isResolved ? 'RESOLVED' : 'ACTIVE OUTAGE';
+                    const badgeColor = isResolved ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20 animate-pulse';
+                    
+                    return `
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-slate-900/40 border ${isResolved ? 'border-slate-800/60' : 'border-rose-500/20'} rounded-xl text-xs gap-2 font-mono">
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 truncate">
+                                <span class="relative flex h-2 w-2">
+                                    ${!isResolved ? `<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>` : ''}
+                                    <span class="relative inline-flex rounded-full h-2 w-2 ${isResolved ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                                </span>
+                                <span class="text-slate-200 font-bold">${inc.monitor_name}</span>
+                                <span class="text-slate-500 text-[11px]">Started: ${inc.started_at}</span>
+                                <span class="text-rose-400/80 text-[11px] font-sans">(${inc.cause})</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded border self-start sm:self-auto ${badgeColor} text-[10px] font-sans font-bold tracking-wider">${statusText}</span>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error("Failed to sync incidents:", err);
+            }
+        }
+
         async function updateStatus() {
             try {
                 const response = await fetch('/status');
@@ -146,15 +198,12 @@
                 
                 const timeLabel = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
                 
-                // Add fresh time mark to chart if it is distinct
-                if (latencyChart.data.labels[latencyChart.data.labels.length - 1] !== timeLabel) {
-                    latencyChart.data.labels.push(timeLabel);
-                    if (latencyChart.data.labels.length > 10) latencyChart.data.labels.shift();
-                }
+                latencyChart.data.labels.push(timeLabel);
+                if (latencyChart.data.labels.length > 10) latencyChart.data.labels.shift();
 
                 data.monitors.forEach((monitor) => {
                     const mappedInfo = monitorMap[monitor.id];
-                    if (!mappedInfo) return; // Skip if ID isn't registered on initial load
+                    if (!mappedInfo) return; 
                     
                     const datasetIndex = mappedInfo.index;
                     const card = document.getElementById(`card-${monitor.id}`);
@@ -163,9 +212,7 @@
 
                     const ms = monitor.latest_check ? monitor.latest_check.response_ms : 0;
 
-                    // Push value directly to the correct dataset index matching the Monitor ID
                     if (latencyChart.data.datasets[datasetIndex]) {
-                        // Prevent duplicating the very first load dot if executing instantly
                         if (latencyChart.data.labels.length === 1 && latencyChart.data.datasets[datasetIndex].data.length === 1) {
                             latencyChart.data.datasets[datasetIndex].data[0] = ms;
                         } else {
@@ -178,7 +225,6 @@
 
                     if (latencyText) latencyText.innerText = `${ms}ms`;
 
-                    // Update UI states reactively
                     if (monitor.is_down) {
                         if (card) card.className = "group relative bg-[#0f1424] border border-rose-500/30 bg-rose-950/5 rounded-2xl p-5 transition-all duration-300 shadow-xl shadow-black/20";
                         if (badge) {
@@ -200,14 +246,14 @@
             }
         }
 
-        // Interval scheduler loop
         setInterval(() => {
             countdownTime--;
             if (countdownTime <= 0) {
                 updateStatus();
+                updateIncidents();
                 countdownTime = 10;
             }
-            if (countdownEl) countdownEl.innerText = countdownTime;
+            countdownEl.innerText = countdownTime;
         }, 1000);
 
         window.onload = initChart;
