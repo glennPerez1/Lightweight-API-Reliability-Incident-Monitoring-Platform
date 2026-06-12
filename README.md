@@ -15,9 +15,9 @@ Built with **Python**, **FastAPI**, **SQLite**, **APScheduler**, **Tailwind CSS*
 - Measures response times and availability.
 - Supports multiple endpoints running on independent schedules.
 
-### Asynchronous Health Checks
-- Uses non-blocking I/O for efficient concurrent monitoring.
-- Checks multiple services simultaneously without slowing down the application.
+### Thread-Pool Concurrency
+- Runs health checks on independent schedules via APScheduler's background thread pool.
+- Ensures a slow or hanging check on one endpoint never blocks or delays checks on other targets.
 
 ### Incident Detection & Tracking
 - Detects repeated failures using configurable thresholds.
@@ -28,7 +28,7 @@ Built with **Python**, **FastAPI**, **SQLite**, **APScheduler**, **Tailwind CSS*
 - Modern dark-themed monitoring console.
 - Split-screen layout inspired by Network Operations Center (NOC) dashboards.
 - Live latency charts and uptime analytics.
-- No scrolling required for common monitoring tasks.
+- Structured layout designed to minimize scrolling for common monitoring tasks.
 
 ### Local Storage
 - Uses SQLite for storing:
@@ -90,7 +90,9 @@ Before running the project, make sure you have:
 
 ```bash
 git clone git@github.com:glennPerez1/Lightweight-API-Reliability-Incident-Monitoring-Platform.git 
+
 git clone https://github.com/glennPerez1/Lightweight-API-Reliability-Incident-Monitoring-Platform.git 
+
 cd api-health-monitor
 ```
 
